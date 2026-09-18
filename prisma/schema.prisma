@@ -1,0 +1,292 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CUSTOMER
+  AGENT
+  ADMIN
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  password      String?
+  role          Role      @default(CUSTOMER)
+  customerId    String?   @unique // e.g. CUST-1001
+  
+  orders          Order[]
+  tickets         Ticket[]       @relation("CustomerTickets")
+  assignedTickets Ticket[]       @relation("AgentTickets")
+  ticketMessages  TicketMessage[]
+  conversations   Conversation[]
+  feedback        Feedback[]
+  devices         Device[]
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  price       Float
+  orders      Order[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+  PROCESSING
+}
+
+model Order {
+  id                   String        @id @default(cuid())
+  orderNumber          String        @unique // e.g. ORD-1001
+  userId               String
+  user                 User          @relation(fields: [userId], references: [id])
+  productId            String
+  product              Product       @relation(fields: [productId], references: [id])
+  amount               Float
+  status               OrderStatus   @default(PENDING)
+  paymentStatus        PaymentStatus @default(PENDING)
+  expectedDelivery     DateTime?
+  cancellationEligible Boolean       @default(false)
+
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING_FOR_CUSTOMER
+  WAITING_FOR_AGENT
+  RESOLVED
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+model Ticket {
+  id             String         @id @default(cuid())
+  subject        String
+  description    String
+  category       String?
+  priority       TicketPriority @default(MEDIUM)
+  status         TicketStatus   @default(OPEN)
+  
+  customerId     String
+  customer       User           @relation("CustomerTickets", fields: [customerId], references: [id])
+  
+  assignedAgentId String?
+  assignedAgent   User?          @relation("AgentTickets", fields: [assignedAgentId], references: [id])
+  
+  aiSummary      String?
+  aiConfidence   Float?
+  sentiment      String?
+  
+  messages       TicketMessage[]
+
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+enum ConversationStatus {
+  ACTIVE
+  RESOLVED
+  ESCALATED
+}
+
+model Conversation {
+  id             String            @id @default(cuid())
+  userId         String
+  user           User              @relation(fields: [userId], references: [id])
+  status         ConversationStatus @default(ACTIVE)
+  messages       Message[]
+  aiActions      AIAction[]
+  
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+}
+
+enum RoleType {
+  USER
+  ASSISTANT
+  SYSTEM
+  TOOL
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           RoleType
+  content        String
+  toolCalls      Json?        
+  
+  createdAt      DateTime     @default(now())
+}
+
+model KnowledgeDocument {
+  id          String   @id @default(cuid())
+  title       String
+  content     String
+  category    String?
+  chunks      KnowledgeChunk[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model KnowledgeChunk {
+  id          String            @id @default(cuid())
+  documentId  String
+  document    KnowledgeDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  content     String
+}
+
+model AIAction {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  intent         String?
+  confidence     Float?
+  sentiment      String?
+  toolsUsed      Json?
+  knowledgeUsed  Json?
+  result         String?
+  
+  createdAt      DateTime     @default(now())
+}
+
+model Feedback {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id])
+  rating         Int
+  comment        String?
+  
+  createdAt      DateTime @default(now())
+}
+
+enum DeviceStatus {
+  ONLINE
+  OFFLINE
+  WARNING
+  CRITICAL
+  MAINTENANCE
+}
+
+enum DeviceType {
+  SENSOR_TEMP_HUMIDITY
+  SENSOR_DOOR
+  SENSOR_AIR_QUALITY
+  METER_ENERGY
+  SENSOR_WATER
+  TRACKER_GPS
+}
+
+model Device {
+  id              String        @id @default(cuid())
+  deviceId        String        @unique // e.g., DEV-T1001
+  name            String
+  type            DeviceType
+  status          DeviceStatus  @default(ONLINE)
+  healthScore     Int           @default(100)
+  
+  battery         Int?          
+  signal          Int?          
+  lastSeen        DateTime?
+  firmwareVersion String?       @default("1.0.0")
+  
+  userId          String
+  user            User          @relation(fields: [userId], references: [id])
+  
+  telemetry       DeviceTelemetry[]
+  alerts          DeviceAlert[]
+  events          DeviceEvent[]
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+model DeviceTelemetry {
+  id          String   @id @default(cuid())
+  deviceId    String
+  device      Device   @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  
+  payload     Json
+  
+  timestamp   DateTime @default(now())
+}
+
+enum AlertSeverity {
+  INFO
+  WARNING
+  CRITICAL
+}
+
+model DeviceAlert {
+  id          String        @id @default(cuid())
+  deviceId    String
+  device      Device        @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  
+  title       String
+  message     String
+  severity    AlertSeverity @default(INFO)
+  resolved    Boolean       @default(false)
+  
+  createdAt   DateTime      @default(now())
+  resolvedAt  DateTime?
+}
+
+model DeviceEvent {
+  id          String   @id @default(cuid())
+  deviceId    String
+  device      Device   @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  
+  type        String   
+  description String?
+  
+  createdAt   DateTime @default(now())
+}
+
+model TicketMessage {
+  id        String   @id @default(cuid())
+  ticketId  String
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  content   String
+  isAgent   Boolean  @default(false)
+  
+  createdAt DateTime @default(now())
+}
