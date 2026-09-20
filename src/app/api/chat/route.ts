@@ -40,7 +40,7 @@ export async function POST(req: Request) {
       },
     });
 
-    const aiMode = "mock"; // Forcing mock mode since NVIDIA API key is invalid/expired
+    const aiMode = process.env.AI_MODE || "mock";
     let aiResult;
 
     if (aiMode === "mock") {
@@ -49,6 +49,15 @@ export async function POST(req: Request) {
       aiResult = await processMockAIRequest(message, session.user);
     } else {
       aiResult = await processLiveAIRequest(message, session.user);
+      
+      // Fallback to offline demo mode if Live AI fails (e.g. invalid API key)
+      if (aiResult.intent === "SYSTEM_ERROR") {
+        console.warn("Live AI failed, falling back to offline demo mode");
+        aiResult = await processMockAIRequest(message, session.user);
+        
+        // Don't escalate to human just because of a fallback
+        aiResult.requires_human = false;
+      }
     }
 
     // Save AI response

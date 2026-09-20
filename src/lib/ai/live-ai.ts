@@ -47,14 +47,14 @@ ${knowledgeChunks.map(c => `[Source: ${c.document.title}]\n${c.content}`).join('
 `;
 
   try {
-    const res = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${process.env.NVIDIA_API_KEY}`,
+        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "meta/llama-3.1-8b-instruct",
+        model: "gpt-4o-mini",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: message }
@@ -67,8 +67,8 @@ ${knowledgeChunks.map(c => `[Source: ${c.document.title}]\n${c.content}`).join('
 
     if (!res.ok) {
       const err = await res.text();
-      console.error("NVIDIA API Error:", res.status, err);
-      throw new Error("NVIDIA API failed");
+      console.error("OpenAI API Error:", res.status, err);
+      throw new Error("OpenAI API failed");
     }
 
     const data = await res.json();

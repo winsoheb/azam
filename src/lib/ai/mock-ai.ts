@@ -31,7 +31,7 @@ export async function processMockAIRequest(message: string, user: any): Promise<
   });
 
   const cleanMsg = msgLower.replace(/[^\w\s]/g, '');
-  const words = cleanMsg.split(/\s+/).filter(w => w.length > 4);
+  const words = cleanMsg.split(/\s+/).filter(w => w.length > 3 && !['what', 'how', 'why', 'when', 'who', 'this', 'that', 'there', 'with'].includes(w));
 
   let ragMatched = false;
   
@@ -88,19 +88,20 @@ export async function processMockAIRequest(message: string, user: any): Promise<
     response = "I understand. I am transferring this diagnostic log and conversation to a human support engineer. They will review your fleet telemetry and get back to you shortly.";
   }
   else {
-    // Only trigger RAG if no specific dynamic intent matched, and query contains knowledge-seeking words
-    const isKnowledgeQuery = msgLower.includes("how") || msgLower.includes("what") || msgLower.includes("why") || msgLower.includes("guide") || msgLower.includes("manual");
-    
-    if (isKnowledgeQuery && words.length > 0) {
+    // Trigger RAG for any non-greeting query
+    if (words.length > 0) {
       const matchedChunks = allChunks.filter(chunk => {
         return words.some(w => chunk.content.toLowerCase().includes(w) || chunk.document.title.toLowerCase().includes(w));
       });
 
       if (matchedChunks.length > 0) {
         knowledgeSources.push(...matchedChunks.map(c => c.document.title));
-        response = `Based on our documentation (${matchedChunks[0].document.title}): ${matchedChunks[0].content}\n\nLet me know if you need more help with this!`;
+        response = `Based on our offline documentation (${matchedChunks[0].document.title}): ${matchedChunks[0].content}\n\nLet me know if you need more help with this!`;
         intent = "DOCUMENTATION_SEARCH";
         ragMatched = true;
+      } else if (msgLower.includes("?") || msgLower.includes("how") || msgLower.includes("what") || msgLower.includes("why")) {
+        response = "I couldn't find an exact match in the local knowledge base. Since I'm currently in Offline Demo Mode, my abilities are limited. Try asking about 'device status', 'temperature warnings', or 'water leaks'!";
+        intent = "GENERAL_INQUIRY";
       }
     }
   }

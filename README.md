@@ -90,6 +90,23 @@ The database seed creates a few default accounts you can use to test the platfor
 
 ---
 
+## 🤖 Offline Demo Mode Questions
+
+If you run the application in Offline Demo Mode (e.g. without a valid AI API key), you can test the AI Copilot by asking any of these 10 built-in test questions:
+
+1. **"What is my device status?"** (Checks database for offline/critical devices)
+2. **"Check my temperature warnings."** (Simulates a temperature diagnostic)
+3. **"Is there a water leak?"** (Simulates a water sensor alert)
+4. **"I want to speak to a human support agent."** (Triggers escalation flow)
+5. **"What is the normal operating temperature for NexaSense T100?"** (Searches offline manual)
+6. **"How do I install the NexaGuard D200 door sensor?"** (Searches offline manual)
+7. **"How do I recalibrate the NexaAir A300 air quality sensor?"** (Searches offline manual)
+8. **"How do I install the NexaPower P400 power meter?"** (Searches offline manual)
+9. **"Why is my device dropping offline?"** (Searches offline troubleshooting guide)
+10. **"How can I extend the battery life?"** (Searches offline battery optimization guide)
+
+---
+
 ## 🚨 Troubleshooting & Common Issues
 
 ### 1. `PrismaClientInitializationError` / "Can't reach database server"
